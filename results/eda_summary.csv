@@ -1,0 +1,3 @@
+split,trips,points,points_median,nodes_max,arcs_max,utm_zones,trips_with_gap_over_30s,trips_with_impossible_speed,missing_cells_total,isolated_nodes_total,trips_route_breaks,utm_trip_worst_err,utm37_worst_err
+student_test,10,19160,1420.0000,26635,56027,9,2,1,0,0,1,0.0004,0.1737
+train,80,208417,1529.0000,155003,307392,25,28,10,0,0,10,0.0009,3.7765
