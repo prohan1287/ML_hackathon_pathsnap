@@ -14,3 +14,5 @@ folium>=0.15
 requests>=2.31
 streamlit>=1.33
 streamlit-folium>=0.20
+fastapi>=0.110
+uvicorn[standard]>=0.29

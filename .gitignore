@@ -29,3 +29,7 @@ artifacts/*.pkl
 
 !artifacts/model.joblib
 !artifacts/model_tuned.joblib
+# Evaluator trips live only on the API laptop and must never be committed
+evaluator*/
+**/evaluator*/
+data/
