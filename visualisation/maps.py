@@ -1,16 +1,5 @@
 
-"""Folium maps of a trip: raw GPS, nearby road network, reference and predicted routes.
-
-Usage:
-    from visualisation.maps import plot_trip
-    m = plot_trip(trip_dir, pred_route=[arc_id, ...], out_html="map.html")
-
-The UI must call plot_trip(..., show_reference=False): reference routes are
-ground truth and must stay on the API laptop.
-
-CLI:
-    python -m visualisation.maps --data-root "<Student folder>" --trips train/00000001
-"""
+"""Folium maps for PathSnap: GPS, road network, reference and predicted routes."""
 
 from __future__ import annotations
 
@@ -39,7 +28,11 @@ COLORS = {
 
 
 def _arc_lines(trip: dict, arc_ids) -> list[list[tuple[float, float]]]:
-    nodes, arcs = trip["nodes"], trip["arcs"]
+    """Convert road arc IDs into latitude/longitude line segments."""
+
+    nodes = trip["nodes"]
+    arcs = trip["arcs"]
+
     sub = arcs.loc[list(arc_ids)]
 
     a = nodes.loc[sub.from_node, ["lat", "lon"]].to_numpy()
@@ -52,7 +45,7 @@ def _arc_lines(trip: dict, arc_ids) -> list[list[tuple[float, float]]]:
 
 
 def nearby_arcs(trip: dict, buffer_m: float = 200.0) -> np.ndarray:
-    """Find nearby road arcs within a conservative GPS buffer."""
+    """Find road arcs near the GPS observations."""
 
     geo = arc_geometry(trip)
 
@@ -71,6 +64,8 @@ def nearby_arcs(trip: dict, buffer_m: float = 200.0) -> np.ndarray:
 
 
 def _legend(entries: list[tuple[str, str]]) -> folium.Element:
+    """Create a map legend."""
+
     rows = "".join(
         f'<div><span style="display:inline-block;width:14px;height:4px;'
         f'background:{color};margin-right:6px;vertical-align:middle">'
@@ -82,7 +77,7 @@ def _legend(entries: list[tuple[str, str]]) -> folium.Element:
         '<div style="position:fixed;bottom:24px;left:24px;'
         'z-index:9999;background:white;padding:8px 10px;'
         'border:1px solid #bbb;border-radius:4px;font:12px sans-serif">'
-        f"{rows}</div>"
+        f'{rows}</div>'
     )
 
 
@@ -94,7 +89,8 @@ def plot_trip(
     road_buffer_m: float = 200.0,
     max_markers: int = 3000
 ) -> folium.Map:
-    """Create an interactive map with toggleable route layers.
+    """
+    Create an interactive map of one trip.
 
     pred_route:
         Optional sequence of predicted road arc IDs.
@@ -107,8 +103,13 @@ def plot_trip(
     trip = load_trip(trip_dir)
     track = trip["track"]
 
-    # Create map using CartoDB Positron tiles instead of OpenStreetMap.
+    # Base map: CartoDB Positron instead of OpenStreetMap
     m = folium.Map(
+        location=[
+            track.lat.mean(),
+            track.lon.mean()
+        ],
+        zoom_start=13,
         tiles="CartoDB positron",
         control_scale=True
     )
@@ -124,7 +125,10 @@ def plot_trip(
     )
 
     folium.PolyLine(
-        _arc_lines(trip, nearby_arcs(trip, road_buffer_m)),
+        _arc_lines(
+            trip,
+            nearby_arcs(trip, road_buffer_m)
+        ),
         color=COLORS["roads"],
         weight=2,
         opacity=0.6
@@ -200,7 +204,7 @@ def plot_trip(
             fill=True,
             fill_opacity=0.8,
             weight=0,
-            tooltip=f"point {idx}, t={r.t:.0f}s"
+            tooltip=f"GPS point {idx}, time={r.t:.0f}s"
         ).add_to(gps)
 
     gps.add_to(m)
@@ -225,7 +229,7 @@ def plot_trip(
             icon=folium.Icon(color=COLORS[name])
         ).add_to(m)
 
-    # 6. Layer controls and legend
+    # 6. Layer control and legend
     folium.LayerControl(
         collapsed=False
     ).add_to(m)
@@ -234,7 +238,7 @@ def plot_trip(
         _legend(legend)
     )
 
-    # 7. Save map
+    # 7. Save HTML map
     if out_html:
         Path(out_html).parent.mkdir(
             parents=True,
@@ -247,36 +251,42 @@ def plot_trip(
 
 
 def main() -> None:
-    ap = argparse.ArgumentParser(
-        description="Save Folium maps for selected trips"
+    parser = argparse.ArgumentParser(
+        description="Generate PathSnap trip maps"
     )
 
-    ap.add_argument(
+    parser.add_argument(
         "--data-root",
         default=os.environ.get("PATHSNAP_DATA")
     )
 
-    ap.add_argument(
+    parser.add_argument(
         "--trips",
         nargs="+",
         required=True,
-        help="e.g. train/00000001"
+        help="Example: train/00000001"
     )
 
-    args = ap.parse_args()
+    args = parser.parse_args()
 
     if not args.data_root:
-        ap.error("--data-root is required")
-
-    for t in args.trips:
-        out = MAPS / f"{t.replace('/', '_')}.html"
-
-        plot_trip(
-            Path(args.data_root) / t,
-            out_html=out
+        parser.error(
+            "--data-root is required. Set PATHSNAP_DATA first."
         )
 
-        print("saved", out)
+    for trip_name in args.trips:
+        trip_path = Path(args.data_root) / trip_name
+
+        output_path = (
+            MAPS / f"{trip_name.replace('/', '_')}.html"
+        )
+
+        plot_trip(
+            trip_path,
+            out_html=output_path
+        )
+
+        print(f"Saved map: {output_path}")
 
 
 if __name__ == "__main__":
