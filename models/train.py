@@ -159,7 +159,30 @@ def main() -> None:
 
     comparison = pd.DataFrame(comparison_rows).sort_values("cv_macro_f1_mean", ascending=False)
     comparison.to_csv(RESULTS / "model_comparison.csv", index=False)
-    pd.DataFrame(experiment_rows).to_json(RESULTS / "experiments.json", orient="records", indent=2, default_handler=str)
+    comparison_by_model = comparison.set_index("model").to_dict(orient="index")
+    csv_rows = []
+
+    for item in experiment_rows:
+        metrics = comparison_by_model[item["model"]]
+        csv_rows.append({
+            "model": item["model"],
+            "cv_macro_f1_mean": metrics["cv_macro_f1_mean"],
+            "cv_macro_f1_std": metrics["cv_macro_f1_std"],
+            "cv_log_loss_mean": metrics["cv_log_loss_mean"],
+            "student_test_top1": metrics["top1_accuracy"],
+            "student_test_macro_f1": metrics["macro_f1"],
+            "student_test_log_loss": metrics["log_loss"],
+            "fit_seconds": metrics["fit_seconds"],
+            "inference_seconds": metrics["inference_seconds"],
+            "seed": item["seed"],
+            "hyperparameters": json.dumps(item["params"], default=str)
+        })
+
+    pd.DataFrame(csv_rows).to_csv(RESULTS / "experiments.csv", index=False)
+    pd.DataFrame(experiment_rows).to_json(
+        RESULTS / "experiments.json", orient="records",
+        indent=2, default_handler=str
+    )
 
     # Model choice uses grouped CV F1, not student-test or training accuracy.
     best_name = str(comparison.iloc[0]["model"])
