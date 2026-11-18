@@ -140,6 +140,29 @@ def main() -> None:
         fit_seconds = time.perf_counter() - start
         start = time.perf_counter()
         test_probs = fitted.predict_proba(X_test)[:, 1]
+        # Save student-test confusion matrix for this model
+        figures_dir = RESULTS / "figures"
+        figures_dir.mkdir(parents=True, exist_ok=True)
+
+        test_predictions = (test_probs >= 0.5).astype(int)
+        cm = confusion_matrix(y_test, test_predictions)
+
+        fig, ax = plt.subplots(figsize=(5, 4))
+        ax.imshow(cm)
+        ax.set_title(f"{name} - Confusion Matrix")
+        ax.set_xlabel("Predicted label")
+        ax.set_ylabel("True label")
+        ax.set_xticks([0, 1], ["False", "True"])
+        ax.set_yticks([0, 1], ["False", "True"])
+
+        for i in range(2):
+            for j in range(2):
+                ax.text(j, i, str(cm[i, j]), ha="center", va="center")
+
+        fig.tight_layout()
+        fig.savefig(figures_dir / f"confusion_matrix_{name}.png", dpi=160)
+        plt.close(fig)
+
         infer_seconds = time.perf_counter() - start
         row = metric_row(name, y_test, test_probs, test)
         row.update({"cv_macro_f1_mean": float(np.mean(fold_f1)),
