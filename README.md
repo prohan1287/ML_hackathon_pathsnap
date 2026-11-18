@@ -32,3 +32,36 @@ python -m optimisation.tune
 ```
 
 Do not use evaluator trips for development or tuning.
+
+## Candidate generation and route decoding (Sarthki)
+
+Install the packages in `requirements.txt`, set `PATHSNAP_DATA` to the folder
+containing `train/` and `student_test/`, and generate Sanjana's official labels
+first with `python -m data_processing.labels`. Then run:
+
+```bash
+python -m features.candidates --radius 50 --top-k 20
+```
+
+This reads the official `results/points_{split}.parquet` labels and writes
+`results/candidates_{split}.parquet` plus candidate miss-rate tables for
+30/50/75 m radii and top-10/20/50 caps. It does not rewrite the points files.
+Training candidates for points with `align_dist_m > 50` are dropped; all
+student-test points are retained. No ground-truth alignment columns are copied
+to candidate rows. The supplied data spans many regions, so the loader chooses
+a local WGS84 UTM zone from each trip's GPS centroid. It stores the code in
+`trip["crs"]`; projected `x` and `y`, distances, and speeds are in metres. Do
+not force EPSG:32637 across trips.
+
+The candidate table includes point-to-segment distance and rank, candidate
+count, direction-aware heading difference, GPS speed and time gap, segment
+length, projection position, and previous/next observation distances.
+`is_true` identifies candidates equal to Sanjana's `label_arc`; model features
+exclude `label_arc`, `route_pos`, `align_dist_m`, and `bad_label_trip`.
+
+For sequence decoding, load a trip, build the directed graph with
+`road_graph_from_trip(trip)`, add the selected classifier's per-row
+`probability` column to its candidate frame, then call `decode(frame, graph)`.
+The decoder uses log probabilities and route-distance transition scores,
+returns one arc ID (or `None`) per point, and restarts at long gaps or when no
+directed path connects adjacent candidate sets.
