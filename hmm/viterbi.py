@@ -76,14 +76,13 @@ def decode(cands_with_prob: pd.DataFrame, graph, *, beta: float = 100.0,
     grouped = {int(i): g.reset_index(drop=True) for i, g in frame.groupby("point_idx", sort=True)}
     out: list[int | None] = [None] * n_points
 
-    @lru_cache(maxsize=100_000)
+    @lru_cache(maxsize=20_000)
+    def reachable_from(src: int) -> dict:
+        # Bounded Dijkstra: nodes further than gap_distance_m + 500 m are treated as unreachable.
+        return nx.single_source_dijkstra_path_length(road.graph, src, cutoff=gap_distance_m + 500.0, weight="weight")
+
     def node_distance(src: int, dst: int) -> float:
-        if src == dst:
-            return 0.0
-        try:
-            return float(nx.shortest_path_length(road.graph, src, dst, weight="weight"))
-        except (nx.NetworkXNoPath, nx.NodeNotFound):
-            return math.inf
+        return 0.0 if src == dst else reachable_from(src).get(dst, math.inf)
 
     def step_transition(a: pd.Series, b: pd.Series, gps_dist: float) -> float:
         aa, bb = int(a.arc_id), int(b.arc_id)
