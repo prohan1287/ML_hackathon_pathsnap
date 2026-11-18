@@ -8,6 +8,11 @@ data/guidelines/
 data/guidelines_text/
 .ipynb_checkpoints/
 .DS_Store
+data/
+evaluator/
+evaluator_test/
+.streamlit/
+*.log
 results/*.parquet
 results/figures/*.png
 !results/experiments.csv
