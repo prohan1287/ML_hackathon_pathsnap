@@ -1,0 +1,14 @@
+{
+  "model": "HistGradientBoosting",
+  "best_params": {
+    "learning_rate": 0.020547810139558063,
+    "max_iter": 350,
+    "max_leaf_nodes": 51,
+    "min_samples_leaf": 68,
+    "l2_regularization": 0.00039831308577131536
+  },
+  "best_cv_macro_f1": 0.8808478119641387,
+  "trials": 20,
+  "search_seconds": 522.2991431999835,
+  "fit_seconds": 5.631682400009595
+}

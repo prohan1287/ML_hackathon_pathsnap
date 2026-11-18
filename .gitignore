@@ -26,3 +26,6 @@ artifacts/*.pkl
 !results/figures/route_vs_gps_length.png
 !results/figures/sample_trips_network.png
 !results/figures/label_alignment_distance.png
+
+!artifacts/model.joblib
+!artifacts/model_tuned.joblib
