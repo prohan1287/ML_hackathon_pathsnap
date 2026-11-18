@@ -65,3 +65,28 @@ For sequence decoding, load a trip, build the directed graph with
 The decoder uses log probabilities and route-distance transition scores,
 returns one arc ID (or `None`) per point, and restarts at long gaps or when no
 directed path connects adjacent candidate sets.
+
+## Demo: API (laptop 1) + UI (laptop 2)
+
+```bash
+pip install -r requirements.txt
+```
+
+**Laptop 1 (API)** holds the model (`artifacts/`), the HMM settings (`artifacts/hmm_config.json`) and the trip folders.
+Point `PATHSNAP_EVAL_DATA` at the folder of trips to serve (use `student_test` for testing; the evaluator folder only
+for the final demo), then start the server. Request logs print in this terminal.
+
+```bash
+export PATHSNAP_EVAL_DATA="/path/to/evaluator_test"          # Windows: $env:PATHSNAP_EVAL_DATA = "C:\path\to\evaluator_test"
+uvicorn api.main:app --host 0.0.0.0 --port 8000
+```
+
+**Laptop 2 (UI)** needs only Python and the UI packages, no data or model:
+
+```bash
+streamlit run ui/app.py      # in the sidebar enter http://<laptop-1-ip>:8000
+```
+
+Both laptops must be on the same network, and laptop 1's firewall must allow port 8000. `POST /predict` runs
+load_trip -> candidates -> model -> Viterbi; accuracy is computed on laptop 1 after prediction, and the reference route
+is never sent to the UI. See `ui/README.md` for the API contract.
