@@ -1,0 +1,6 @@
+{
+  "model": "HistGradientBoosting",
+  "selection_metric": "GroupKFold mean macro-F1",
+  "selection_score": 0.8805624404070596,
+  "random_state": 42
+}

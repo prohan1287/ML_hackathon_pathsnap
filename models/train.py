@@ -32,7 +32,13 @@ ARTIFACTS = ROOT / "artifacts"
 RESULTS.mkdir(exist_ok=True)
 ARTIFACTS.mkdir(exist_ok=True)
 TARGET = "is_true"
-NON_FEATURES = {TARGET, "trip_id", "point_idx", "arc_id", "label_arc", "is_true"}
+# Ids/labels plus point-level location columns: x, y, lon, lat, t are the same for every candidate of a
+# GPS point (so they cannot rank candidates) and would let the model memorise where trips are.
+NON_FEATURES = {TARGET, "trip_id", "point_idx", "arc_id", "label_arc", "is_true",
+                "x", "y", "lon", "lat", "t", "crs", "heading_diff_deg"}
+# Consecutive GPS points are 1 s apart and nearly identical; training on every 5th point removes
+# redundancy (about 5x faster). Student-test is always evaluated on every point.
+TRAIN_POINT_STRIDE = 5
 RANDOM_STATE = 42
 
 
@@ -74,10 +80,10 @@ def build_models(seed: int = RANDOM_STATE) -> dict[str, Pipeline]:
     return {
         "LogisticRegression": scaled(LogisticRegression(max_iter=1500, class_weight="balanced", random_state=seed)),
         "KNN": scaled(KNeighborsClassifier(n_neighbors=11, weights="distance", n_jobs=-1)),
-        "RandomForest": tree(RandomForestClassifier(n_estimators=300, max_depth=None, min_samples_leaf=2,
+        "RandomForest": tree(RandomForestClassifier(n_estimators=100, max_depth=20, min_samples_leaf=5,
                                                        class_weight="balanced_subsample", n_jobs=-1,
                                                        random_state=seed)),
-        "ExtraTrees": tree(ExtraTreesClassifier(n_estimators=300, min_samples_leaf=2,
+        "ExtraTrees": tree(ExtraTreesClassifier(n_estimators=100, max_depth=20, min_samples_leaf=5,
                                                  class_weight="balanced", n_jobs=-1, random_state=seed)),
         "HistGradientBoosting": tree(HistGradientBoostingClassifier(max_iter=200, learning_rate=0.08,
                                                                        max_leaf_nodes=31, random_state=seed)),
@@ -109,8 +115,34 @@ def metric_row(name: str, y_true: np.ndarray, probs: np.ndarray,
     }
 
 
+def save_training_curve(name: str, fitted: Pipeline) -> None:
+    """Epoch/iteration loss curves, only for models that really train iteratively (MLP, boosting)."""
+    model = fitted.named_steps["model"]
+    if hasattr(model, "loss_curve_"):
+        curves = {"training loss": model.loss_curve_}
+        xlabel = "epoch"
+    elif getattr(model, "train_score_", None) is not None and len(model.train_score_) > 1:
+        # HistGradientBoosting stores negative log loss; early stopping holds out 10% for validation.
+        curves = {"training loss": -model.train_score_, "validation loss": -model.validation_score_}
+        xlabel = "boosting iteration"
+    else:
+        return
+    fig, ax = plt.subplots(figsize=(6, 4))
+    for label, values in curves.items():
+        ax.plot(values, label=label)
+    ax.set_title(f"{name} - training history")
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel("log loss")
+    ax.legend()
+    fig.tight_layout()
+    (RESULTS / "figures").mkdir(parents=True, exist_ok=True)
+    fig.savefig(RESULTS / "figures" / f"training_curve_{name}.png", dpi=160)
+    plt.close(fig)
+
+
 def main() -> None:
     train = load_data(RESULTS / "candidates_train.parquet")
+    train = train[train["point_idx"] % TRAIN_POINT_STRIDE == 0].reset_index(drop=True)
     test = load_data(RESULTS / "candidates_student_test.parquet")
     features = get_features(train)
     missing_test = sorted(set(features) - set(test.columns))
@@ -140,6 +172,8 @@ def main() -> None:
         fit_seconds = time.perf_counter() - start
         start = time.perf_counter()
         test_probs = fitted.predict_proba(X_test)[:, 1]
+        infer_seconds = time.perf_counter() - start
+        save_training_curve(name, fitted)
         # Save student-test confusion matrix for this model
         figures_dir = RESULTS / "figures"
         figures_dir.mkdir(parents=True, exist_ok=True)
@@ -163,7 +197,6 @@ def main() -> None:
         fig.savefig(figures_dir / f"confusion_matrix_{name}.png", dpi=160)
         plt.close(fig)
 
-        infer_seconds = time.perf_counter() - start
         row = metric_row(name, y_test, test_probs, test)
         row.update({"cv_macro_f1_mean": float(np.mean(fold_f1)),
                     "cv_macro_f1_std": float(np.std(fold_f1)),
@@ -228,7 +261,7 @@ def main() -> None:
         ax = comparison.set_index("model")[metric].plot(kind="bar", rot=25, figsize=(9, 5), title=title)
         ax.set_ylabel(metric); ax.set_xlabel(""); ax.figure.tight_layout()
         ax.figure.savefig(RESULTS / "figures" / filename, dpi=160); plt.close(ax.figure)
-    print(f"\\nSelected {best_name}; saved model and feature list in artifacts/.")
+    print(f"\nSelected {best_name}; saved model and feature list in artifacts/.")
     print(comparison.to_string(index=False))
 
 if __name__ == "__main__":

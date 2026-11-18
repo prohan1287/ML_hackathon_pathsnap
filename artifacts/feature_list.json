@@ -1,0 +1,13 @@
+[
+  "distance_m",
+  "distance_rank",
+  "candidate_count",
+  "heading_diff_rad",
+  "gps_speed_mps",
+  "arc_length_m",
+  "projection_m",
+  "projection_fraction",
+  "prev_distance_m",
+  "next_distance_m",
+  "time_gap_s"
+]

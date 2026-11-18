@@ -1,0 +1,28 @@
+{
+  "model": "HistGradientBoosting",
+  "trials": 20,
+  "search_seconds": 522.2991431999835,
+  "best_params": {
+    "learning_rate": 0.020547810139558063,
+    "max_iter": 350,
+    "max_leaf_nodes": 51,
+    "min_samples_leaf": 68,
+    "l2_regularization": 0.00039831308577131536
+  },
+  "untuned": {
+    "cv_macro_f1": 0.8805624404070596,
+    "student_test_top1": 0.8230167014613778,
+    "student_test_macro_f1": 0.8942103859852448,
+    "student_test_log_loss": 0.09422448252898419,
+    "inference_seconds": 0.3717829000088386,
+    "fit_seconds": 2.814617800002452
+  },
+  "tuned": {
+    "cv_macro_f1": 0.8808478119641387,
+    "student_test_top1": 0.822964509394572,
+    "student_test_macro_f1": 0.8946711625344289,
+    "student_test_log_loss": 0.0932960995972266,
+    "inference_seconds": 0.6965755000128411,
+    "fit_seconds": 5.631682400009595
+  }
+}
