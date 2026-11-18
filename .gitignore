@@ -3,6 +3,9 @@ __pycache__/
 .venv/
 venv/
 .env
+data/Student folder/
+data/guidelines/
+data/guidelines_text/
 .ipynb_checkpoints/
 .DS_Store
 results/*.parquet
@@ -14,6 +17,7 @@ artifacts/*.pkl
 !artifacts/feature_list.json
 # Data/EDA outputs shared with the team (labels feed candidate generation; figures go in the report)
 !results/points_*.parquet
+!results/candidates_*.parquet
 !results/figures/points_per_trip.png
 !results/figures/time_gaps.png
 !results/figures/speed_distribution.png
