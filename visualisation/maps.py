@@ -64,7 +64,10 @@ def plot_trip(trip_dir, pred_route=None, out_html=None, show_reference: bool = T
     """
     trip = load_trip(trip_dir)
     track = trip["track"]
-    m = folium.Map(tiles="OpenStreetMap", control_scale=True)
+   m = folium.Map(
+    tiles="CartoDB positron",
+    control_scale=True
+)
     m.fit_bounds([[track.lat.min(), track.lon.min()], [track.lat.max(), track.lon.max()]])
 
     roads = folium.FeatureGroup(name="Road network (nearby)")
